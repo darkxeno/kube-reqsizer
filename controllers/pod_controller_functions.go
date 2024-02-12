@@ -68,16 +68,19 @@ func (r *PodReconciler) UpdateKubeObject(pod client.Object, ctx context.Context)
 		if apierrors.IsConflict(err) {
 			// The Pod has been updated since we read it.
 			// Requeue the Pod to try to reconciliate again.
+			log.Error(err, "unable to update object: conflict")
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 		if apierrors.IsNotFound(err) {
 			// The Pod has been deleted since we read it.
 			// Requeue the Pod to try to reconciliate again.
+			log.Error(err, "unable to update object: not-found")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "unable to update pod")
 		return ctrl.Result{}, err
 	}
+	log.Info("KubeObject updated")
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 }
 

@@ -309,12 +309,17 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 					return r.UpdateKubeObject(&pod, ctx)
 				}
 
-				err, podSpec, deployment, _ := r.GetPodParentKind(pod, ctx)
+				err, podSpec, deployment, deploymentName := r.GetPodParentKind(pod, ctx)
 				if err != nil {
+					log.Error(err, "Pod parent not found")
 					return ctrl.Result{}, err
 				}
 
 				UpdatePodController(podSpec, Requests, ctx)
+
+				log.Info("Updating parent: " + deploymentName)
+				log.Info("Deployment: ", deployment.(client.Object))
+				fmt.Printf("Deployment: %+v\n", deployment.(client.Object))
 
 				return r.UpdateKubeObject(deployment.(client.Object), ctx)
 			}
