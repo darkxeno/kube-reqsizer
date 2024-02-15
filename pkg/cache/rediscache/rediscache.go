@@ -15,12 +15,12 @@ type RedisClient struct {
 func (client RedisClient) AddToCache(object types.PodRequests) error {
 	val, err := json.Marshal(object)
 	if err != nil {
-		klog.Errorf("failed to add key value to cache error", err)
+		klog.Errorf("failed to add key value to cache erro: %+v", err)
 		return err
 	}
 	err = client.Client.Set(object.Name, val, 0).Err()
 	if err != nil {
-		klog.Errorf("failed to add key value to cache error", err)
+		klog.Errorf("failed to add key value to cache error: %+v", err)
 		return err
 	}
 	return nil

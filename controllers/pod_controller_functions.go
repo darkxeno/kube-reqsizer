@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -79,8 +80,10 @@ func (r *PodReconciler) UpdateKubeObject(pod client.Object, ctx context.Context)
 		}
 		log.Error(err, "unable to update pod")
 		return ctrl.Result{}, err
+	} else {
+		log.Info("KubeObject updated")
+		fmt.Printf("Updated Pod: %+v\n", pod)
 	}
-	log.Info("KubeObject updated")
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 }
 
@@ -174,20 +177,24 @@ func GetPodRequests(pod corev1.Pod) types.PodRequests {
 		}
 		containerData = append(containerData, types.ContainerRequests{Name: c.Name, CPU: int64(nanoCores), Memory: int64(miMemory)})
 	}
-	return types.PodRequests{pod.Name, pod.Namespace, containerData, 0}
+	return types.PodRequests{Name: pod.Name, Namespace: pod.Namespace, ContainerRequests: containerData, Sample: 0}
 }
 
 func GeneratePodRequestsObjectFromRestData(restData []byte) types.PodRequests {
 	s := restData[:]
 	data := types.PodMetricsRestData{}
-	json.Unmarshal([]byte(s), &data)
+	err := json.Unmarshal([]byte(s), &data)
+	if err != nil {
+		log.Error(err, "Error unmarshalling restData")
+	}
+
 	containerData := []types.ContainerRequests{}
 	for _, c := range data.Containers {
 		nanoCores, _ := strconv.Atoi(RemoveLastChar(c.Usage.CPU))
 		kiMemory, _ := strconv.Atoi(strings.ReplaceAll(c.Usage.Memory, "Ki", ""))
 		containerData = append(containerData, types.ContainerRequests{Name: c.Name, CPU: int64(nanoCores / 1000000), Memory: int64(kiMemory / 1000)})
 	}
-	return types.PodRequests{data.Metadata.Name, data.Metadata.Namespace, containerData, 0}
+	return types.PodRequests{Name: data.Metadata.Name, Namespace: data.Metadata.Namespace, ContainerRequests: containerData, Sample: 0}
 }
 
 func (r *PodReconciler) MinimumUptimeOfPodInParent(pod corev1.Pod, ctx context.Context) bool {

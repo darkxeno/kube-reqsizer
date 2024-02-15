@@ -140,7 +140,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if ((!r.EnableAnnotation) || (r.EnableAnnotation && annotation)) && !ignoreAnnotation {
+	if ((pod.Status.Phase == "Running") && (!r.EnableAnnotation) || (r.EnableAnnotation && annotation)) && !ignoreAnnotation {
 		log.Info("Cache Reference Name: " + podReferenceName)
 
 		data, err := r.ClientSet.RESTClient().Get().AbsPath(fmt.Sprintf("apis/metrics.k8s.io/v1beta1/namespaces/%v/pods/%v", pod.Namespace, pod.Name)).DoRaw(ctx)
@@ -164,10 +164,16 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			SumPodRequest.Sample = 0
 			log.Info(fmt.Sprint("Adding cache sample ", SumPodRequest.Sample))
 			if r.EnablePersistence {
-				r.RedisClient.AddToCache(SumPodRequest)
+				err := r.RedisClient.AddToCache(SumPodRequest)
+				if err != nil {
+					log.Error(err, "Error adding SumPodRequest to cache")
+				}
 				log.Info(fmt.Sprint("Items in Cache: ", r.RedisClient.CacheSize()))
 			} else {
-				localcache.AddToCache(cacheStore, SumPodRequest)
+				err := localcache.AddToCache(cacheStore, SumPodRequest)
+				if err != nil {
+					log.Error(err, "Error adding cacheStore and SumPodRequest to cache")
+				}
 				log.Info(fmt.Sprint("Items in Cache: ", len(cacheStore.List())))
 			}
 		} else {
@@ -300,7 +306,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 			}
 			if PodChange {
-				pod.Annotations["reqsizer.jatalocks.github.io/changed"] = "true"
+				//pod.Annotations["reqsizer.jatalocks.github.io/changed"] = "true"
 
 				log.Info("Pod Requests Will Change")
 
@@ -318,7 +324,6 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				UpdatePodController(podSpec, Requests, ctx)
 
 				log.Info("Updating parent: " + deploymentName)
-				log.Info("Deployment: ", deployment.(client.Object))
 				fmt.Printf("Deployment: %+v\n", deployment.(client.Object))
 
 				return r.UpdateKubeObject(deployment.(client.Object), ctx)

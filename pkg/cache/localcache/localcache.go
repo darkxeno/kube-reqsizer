@@ -11,7 +11,7 @@ import (
 func AddToCache(cacheStore cache.Store, object types.PodRequests) error {
 	err := cacheStore.Add(object)
 	if err != nil {
-		klog.Errorf("failed to add key value to cache error", err)
+		klog.Errorf("failed to add key value to cache error: %+v", err)
 		return err
 	}
 	return nil
