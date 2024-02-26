@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"time"
+	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/jatalocks/kube-reqsizer/pkg/cache/localcache"
@@ -32,8 +32,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/kubectl/pkg/scheme"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -140,7 +142,11 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if ((pod.Status.Phase == "Running") && (!r.EnableAnnotation) || (r.EnableAnnotation && annotation)) && !ignoreAnnotation {
+	if pod.Status.Phase != "Running" {
+		return ctrl.Result{}, nil
+	}
+
+	if ((!r.EnableAnnotation) || (r.EnableAnnotation && annotation)) && !ignoreAnnotation {
 		log.Info("Cache Reference Name: " + podReferenceName)
 
 		data, err := r.ClientSet.RESTClient().Get().AbsPath(fmt.Sprintf("apis/metrics.k8s.io/v1beta1/namespaces/%v/pods/%v", pod.Namespace, pod.Name)).DoRaw(ctx)
@@ -324,12 +330,16 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				UpdatePodController(podSpec, Requests, ctx)
 
 				log.Info("Updating parent: " + deploymentName)
-				fmt.Printf("Deployment: %+v\n", deployment.(client.Object))
+				//fmt.Printf("Deployment: %+v\n", deployment.(client.Object))
+				printr := printers.NewTypeSetter(scheme.Scheme).ToPrinter(&printers.YAMLPrinter{})
+				if err := printr.PrintObj(deployment.(client.Object), os.Stdout); err != nil {
+					log.Error(err, "Error printing kubernetes object as yaml")
+				}
 
 				return r.UpdateKubeObject(deployment.(client.Object), ctx)
 			}
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	return ctrl.Result{}, nil
 }

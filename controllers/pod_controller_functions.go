@@ -84,7 +84,8 @@ func (r *PodReconciler) UpdateKubeObject(pod client.Object, ctx context.Context)
 		log.Info("KubeObject updated")
 		fmt.Printf("Updated Pod: %+v\n", pod)
 	}
-	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	//return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	return ctrl.Result{}, nil
 }
 
 func UpdatePodController(podspec *corev1.PodSpec, Requests []types.NewContainerRequests, ctx context.Context) {
@@ -98,12 +99,17 @@ func UpdatePodController(podspec *corev1.PodSpec, Requests []types.NewContainerR
 	}
 }
 
+func newTrue() *bool {
+	b := true
+	return &b
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager, concurrentWorkers uint) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: int(concurrentWorkers),
-			RecoverPanic:            true,
+			RecoverPanic:            newTrue(),
 		}).
 		For(&corev1.Pod{}).
 		Complete(r)
