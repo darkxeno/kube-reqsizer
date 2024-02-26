@@ -84,8 +84,8 @@ func (r *PodReconciler) UpdateKubeObject(pod client.Object, ctx context.Context)
 		log.Info("KubeObject updated")
 		fmt.Printf("Updated Pod: %+v\n", pod)
 	}
-	//return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+	//return ctrl.Result{}, nil
 }
 
 func UpdatePodController(podspec *corev1.PodSpec, Requests []types.NewContainerRequests, ctx context.Context) {

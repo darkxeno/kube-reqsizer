@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/jatalocks/kube-reqsizer/pkg/cache/localcache"
@@ -341,5 +342,6 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 	}
 
-	return ctrl.Result{}, nil
+	//return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 }
